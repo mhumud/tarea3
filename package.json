@@ -1,0 +1,10 @@
+{
+  "name": "tarea3",
+  "version": "1.0",
+  "description": "tarea3 TDI",
+  "dependencies": {
+    "express": "^4.15.2",
+    "jquery": "^3.3.1",
+    "socket.io": "^2.1.1"
+  }
+}
