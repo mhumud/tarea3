@@ -13,7 +13,7 @@
 4 verbose stack     at /usr/lib/node_modules/npm/node_modules/graceful-fs/graceful-fs.js:78:16
 4 verbose stack     at tryToString (fs.js:457:3)
 4 verbose stack     at FSReqWrap.readFileAfterClose [as oncomplete] (fs.js:444:12)
-5 verbose cwd /home/miguel/Documents/Universidad/Taller de Integración/tarea3-Node
+5 verbose cwd /home/miguel/Documents/Universidad/Taller de Integración/tarea3
 6 error Linux 4.13.0-43-generic
 7 error argv "/usr/bin/node" "/usr/bin/npm" "start"
 8 error node v6.14.2
