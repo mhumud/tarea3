@@ -29,7 +29,9 @@
     <div id="map"></div>
     <script>
       var map;
+      var iconBase = 'https://maps.google.com/mapfiles/kml/';
       var flights = {};
+      var traces = {};
       var infoWindow;
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -40,7 +42,7 @@
       }
 
       function addAirportsToMap(data) {
-        var lines = []
+        var airports = [];
         for (code in data) {
           // Add markers for airports
           var position = data[code]['airport_position'];
@@ -48,9 +50,7 @@
             position: { lat: position[0], lng: position[1] },
             map: map
           });
-
-          // Add lines to map
-          lines = lines.concat({ lat: position[0], lng: position[1] });
+          airports.push(marker);
 
           // Add content to infoWindow
           var json = data[code];
@@ -62,26 +62,48 @@
           'Latitud y longitud: ' + json['airport_position'];
           addListenersToMarker(marker, content);
         }
-        // Add origin-destination lines on map
-        var flightPath = new google.maps.Polyline({
-          path: lines,
-          geodesic: true,
-          strokeColor: '#FF0000',
-          strokeOpacity: 0.5,
-          strokeWeight: 2
-        });
-        flightPath.setMap(map);
+
+        // Autocenter map on airports
+        centerOnAirports(airports);
       }
 
       function addFlightsToMap(data) {
         // Add markers for flights
         for (flight in data) {
+          var lines = []
           var marker = new google.maps.Marker({
-            map: map
+            map: map,
+            icon: iconBase + 'pal2/icon48.png'
           });
           flights[data[flight]['code']] = marker;
-          // Add content to infoWindow
+
+          // Set up trace for flight
+          traces[data[flight]['code'] + 'position'] = [];
+          var flightTrace = new google.maps.Polyline({
+            path: [],
+            geodesic: true,
+            strokeColor: '#FF0000',
+            strokeOpacity: 1,
+            strokeWeight: 4
+          });
+          traces[data[flight]['code'] + 'polyline'] = flightTrace;
+
+          // Add lines to map between airports
           var json = data[flight];
+          var origin = json['origin']['airport_position'];
+          var destination = json['destination']['airport_position'];
+          lines.push({ lat: origin[0], lng: origin[1] });
+          lines.push({ lat: destination[0], lng: destination[1] });
+          var flightPath = new google.maps.Polyline({
+            path: lines,
+            geodesic: true,
+            strokeColor: '#000000',
+            strokeOpacity: 0.2,
+            strokeWeight: 10
+          });
+          flightPath.setMap(map);
+
+          // Add content to infoWindow
           var content =
           'Código: ' + json['code'] + '<br>' +
           'Aerolínea: ' + json['airline'] + '<br>' +
@@ -92,6 +114,7 @@
           'Latitud y longitud: ';
           addListenersToMarker(marker, content);
         }
+
         // Listen to position for update
         socket.on('POSITION', function(data){ updateFlights(data) });
       }
@@ -107,11 +130,19 @@
       }
 
       function updateFlights(data) {
+        // Update location
         var position = data['position'];
         var newPosition = new google.maps.LatLng(position[0], position[1]);
         var marker = flights[data['code']]
         marker.setPosition(newPosition);
+
+        // Update infoWindow
         updateInfoWindow(marker, position);
+
+        // Update trace
+        traces[data['code'] + 'position'].push({ lat: position[0], lng: position[1] });
+        traces[data['code'] + 'polyline'].setPath(traces[data['code'] + 'position']);
+        traces[data['code'] + 'polyline'].setMap(map);
       }
 
       function updateInfoWindow(marker, position) {
@@ -125,6 +156,17 @@
         marker.addListener('mouseout', function() {
           infoWindow.close(map, marker);
         });  
+      }
+
+      function centerOnAirports(airports) {
+        //  Create a new viewpoint bound
+        var bounds = new google.maps.LatLngBounds();
+        //  Go through each...
+        airports.forEach( function(marker) {
+          bounds.extend(marker.position);
+        });
+        //  Fit these bounds to the map
+        map.fitBounds(bounds);
       }
     </script>
     <script async defer
