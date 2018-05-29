@@ -30,24 +30,38 @@
     <script>
       var map;
       var flights = {};
+      var infoWindow;
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
           zoom: 5,
           center: {lat: -33.4569400, lng: -70.6482700}
         });
+        infoWindow = new google.maps.InfoWindow({ content: '' });
       }
 
       function addAirportsToMap(data) {
         var lines = []
         for (code in data) {
+          // Add markers for airports
           var position = data[code]['airport_position'];
           var marker = new google.maps.Marker({
             position: { lat: position[0], lng: position[1] },
             map: map
           });
-          lines = lines.concat({ lat: position[0], lng: position[1] });
-        }
 
+          // Add lines to map
+          lines = lines.concat({ lat: position[0], lng: position[1] });
+
+          // Add content to infoWindow
+          var json = data[code];
+          var content = 
+          'Código: ' + json['airport_code'] + '<br>' +
+          'Nombre: ' + json['name'] + '<br>' +
+          'Ciudad: ' + json['city'] + '<br>' +
+          'País: ' + json['country'] + '<br>' +
+          'Latitud y longitud: ' + json['airport_position'];
+          addListenersToMarker(marker, content);
+        }
         // Add origin-destination lines on map
         var flightPath = new google.maps.Polyline({
           path: lines,
@@ -60,21 +74,57 @@
       }
 
       function addFlightsToMap(data) {
+        // Add markers for flights
         for (flight in data) {
           var marker = new google.maps.Marker({
             map: map
           });
           flights[data[flight]['code']] = marker;
+          // Add content to infoWindow
+          var json = data[flight];
+          var content =
+          'Código: ' + json['code'] + '<br>' +
+          'Aerolínea: ' + json['airline'] + '<br>' +
+          'Origen: ' + json['origin']['airport_code'] + '<br>' +
+          'Destino: ' + json['destination']['airport_code'] + '<br>' +
+          'Avión: ' + json['plane'] + '<br>' +
+          'Número de asientos: ' + json['seats'] + '<br>' + 
+          'Latitud y longitud: ';
+          addListenersToMarker(marker, content);
         }
-
         // Listen to position for update
         socket.on('POSITION', function(data){ updateFlights(data) });
       }
 
+      function addListenersToMarker(marker, content) {
+        marker.addListener('mouseover', function() {
+          infoWindow.setContent(content);
+          infoWindow.open(map, marker);
+        });
+        marker.addListener('mouseout', function() {
+          infoWindow.close(map, marker);
+        });  
+      }
+
       function updateFlights(data) {
-        position = data['position'];
+        var position = data['position'];
         var newPosition = new google.maps.LatLng(position[0], position[1]);
-        flights[data['code']].setPosition(newPosition);
+        var marker = flights[data['code']]
+        marker.setPosition(newPosition);
+        updateInfoWindow(marker, position);
+      }
+
+      function updateInfoWindow(marker, position) {
+        marker.addListener('mouseover', function() {
+          // Retrive content, remove last row and update position
+          var content = infoWindow.content;
+          infoWindow.setContent(content.split(/<br\s*\/?>/i).slice(0,-1).join('<br>') + '<br>' +
+            'Latitud y longitud: ' + position);
+          infoWindow.open(map, marker);
+        });
+        marker.addListener('mouseout', function() {
+          infoWindow.close(map, marker);
+        });  
       }
     </script>
     <script async defer
